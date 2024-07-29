@@ -76,7 +76,7 @@ def chat_llm_no_stream(request: RequestModel, chat_session: ChatSession) -> dict
     )
     if len(chat_session.chats) != 0:
         wants_to_draw_prompt = f"""
-            There has been a conversation between the user and the chatbot about providing github links for a specific solution.
+            There has been a conversation between the user and the chatbot about providing github links repository.
             Given the user's input: {request.user_input}
             When  user imply that they have chosen a solution or chose a number ?
             Respond with 
@@ -96,36 +96,39 @@ def chat_llm_no_stream(request: RequestModel, chat_session: ChatSession) -> dict
     if len(chat_session.chats) == 0:
         initial_context = """
              
-            I will now give you my question or task and you can ask me subsequent questions one by one.
-            Do suggest 3 public repo that that implement my question
-            Provide public github repo links and a 4 lines max summary of what the repo does
-            Suggest 3 repos 
-            <ol>
-              <li>
-                github link 1
-                <p>Repo 1 does X. It is useful for Y.</p>
-              </li>
-              <li>
-                github link 2
-                <p>Repo 2 does A. It is designed to B.</p>
-              </li>
-              <li>
-                github link 3
-                <p>Repo 3 does M. It helps in N.</p>
-              </li>
-            </ol>
-            Provide the links always
-            Ask user which option it prefers.
-            Only ask the question and do not number your questions.
+        I will now give you my question or task, and you can ask me subsequent questions one by one.
+
+        Please format your output in HTML and provide public GitHub repo links with a 4-line max summary of what each repo does. 
+        Here's an example of how the output should look:
+        <ol>
+          <li>
+            <a href="github link 1">github link 1</a>
+            <p>Repo 1 does X. It is useful for Y.</p>
+          </li>
+          <li>
+            <a href="github link 2">github link 2</a>
+            <p>Repo 2 does A. It is designed to B.</p>
+          </li>
+          <li>
+            <a href="github link 3">github link 3</a>
+            <p>Repo 3 does M. It helps in N.</p>
+          </li>
+        </ol>
+        Do suggest 1 to 4 public repos that implement my question.
+        
+        Provide the links always.
+        
+        Ask the user which option they prefer.
+        
+        Only ask the question and do not number your questions.
         """
         text_input = initial_context + text_input
     else:
         text_input = f"""
             Given the following conversation of chatbot and user:
             {chat_session.str_chat()}
-            Proceed with new user response: "{text_input}" and ask one subsequent question in fewer than 100 words if necessary.
-            Respond immediately with a list of repository if you found some.
-            
+            Proceed with new user response: "{text_input}"
+            Respond immediately with a repository URL if you found one. Ensure the GitHub link provided ends with '.git'.
         """
 
     response = chat_model.invoke(text_input)
@@ -133,13 +136,14 @@ def chat_llm_no_stream(request: RequestModel, chat_session: ChatSession) -> dict
     logger.info(f"User chat history: {chat_session.chats}")
 
     response_content = response.content
+    git_url = next((line.strip() for line in response_content.split() if line.strip().endswith('.git')), None)
     chat_session.add_chat(request.user_input, response_content)
     return {
         "user_input": request.user_input,
         "model_output": response_content,
         "wantsToDraw": False,
+        "repository": git_url
     }
-
 
 def generate_mermaid(chat_session: ChatSession) -> dict:
     model = ChatBedrock(

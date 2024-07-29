@@ -35,7 +35,6 @@ model = OpenAI(api_key="sk-proj-ZqBvL23iceVFDeFlJiSET3BlbkFJP5nUGumADbvL1eIyBqNJ
 
 chain = RunnableSequence(prompt | model)
 
-# Function to clone repository and list files
 def clone_and_list_files(repo_url):
     repo_name = repo_url.split("/")[-1].replace(".git", "")
     if os.path.exists(repo_name):
@@ -85,11 +84,6 @@ async def redirect_root_to_docs():
 async def generate_graph(request: Request):
     # try:
         request = await request.json();
-        # response = model.invoke("can you tell me a joke")
-        # print("Raw request body:", data)
-
-        # Main script
-        
         print("Raw request body:", request)
         repo_url = request.get("git_url");
         repo_name, files = clone_and_list_files(repo_url)
