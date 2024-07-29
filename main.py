@@ -24,7 +24,7 @@ logger = getLogger(__name__)
 app = FastAPI()
 router = APIRouter()
 
-os.environ["AWS_PROFILE"] = "fab-geekle"
+#os.environ["AWS_PROFILE"] = "fab-geekle"
 origins = [
     "*",
 ]
@@ -55,6 +55,7 @@ def clone_and_list_files(repo_url):
 def read_file_content(repo_name, filename):
     with open(os.path.join(repo_name, filename), 'r') as file:
         return file.read()
+
 
 def get_response_from_llm(
         input_prompt: str,
@@ -96,6 +97,7 @@ def generate_prompt_for_command(
         """
     return prompt
 
+
 def determine_project_type_and_instructions(files, repo_name):
     project_files = {
         'package.json': 'Node.js',
@@ -123,13 +125,31 @@ def determine_project_type_and_instructions(files, repo_name):
 
 
 # Function to clone repository and list files
-def clone_and_list_files(repo_url):
+def clone_and_list_files(repo_url, temp_dir):
     repo_name = repo_url.split("/")[-1].replace(".git", "")
-    if os.path.exists(repo_name):
-        subprocess.run(["rm", "-rf", repo_name])
-    subprocess.run(["git", "clone", repo_url])
-    files = os.listdir(repo_name)
-    return repo_name, files
+    print(f"Temp dir: {temp_dir.name}")
+    repo_name_dir = os.path.join(temp_dir.name, repo_name)
+
+    if not os.path.exists(repo_name_dir):
+        os.makedirs(repo_name_dir)
+
+    try:
+        ## delete repository
+        # shutil.rmtree(repo_name_dir)
+        repo = git.Repo.clone_from(repo_url, repo_name_dir)
+        print(f"Repository cloned to {repo_name_dir}")
+    except Exception as e:
+        print(f"Error cloning repository: {e}")
+        return []
+
+    # List files in the repository
+    files_list = []
+    for root, dirs, files in os.walk(repo_name_dir):
+        for file in files:
+            files_list.append(os.path.relpath(os.path.join(root, file), repo_name_dir))
+
+    ## return files_list
+    return repo_name_dir, files_list
 
 
 # Function to read the content of a file
@@ -137,13 +157,18 @@ def read_file_content(repo_name, filename):
     with open(os.path.join(repo_name, filename), 'r') as file:
         return file.read()
 
+
 @router.post("/dashboard")
 async def generate_graph(request: Request):
     # try:
     request = await request.json();
     print("Raw request body:", request)
     repo_url = request.get("git_url");
-    repo_name, files = clone_and_list_files(repo_url)
+
+    # file saved into temp dir location
+
+    temp_dir = tempfile.TemporaryDirectory()
+    repo_name, files = clone_and_list_files(repo_url, temp_dir)
     project_type, file_content = determine_project_type_and_instructions(files, repo_name)
     processed_prompt = generate_prompt_for_command(project_type, file_content)
     if project_type == "Unknown":
@@ -160,9 +185,9 @@ async def generate_graph(request: Request):
         # Generate instructions using LangChain
         instructions = llm.invoke(processed_prompt)
     print(instructions)
-
+    # cleaning up temporary files
+    temp_dir.cleanup();
     return instructions
-app.include_router(router)
 
 
 class ModelKWArgs(BaseModel):
@@ -216,18 +241,19 @@ def chat_llm_no_stream(request: RequestModel, chat_session: ChatSession) -> dict
         I will now give you my question or task, and you can ask me subsequent questions one by one.
 
         Please format your output in HTML and provide public GitHub repo links with a 4-line max summary of what each repo does. 
+        Please format the output in HTML without adding any \n characters.
         Here's an example of how the output should look:
         <ol>
           <li>
-            <a href="github link 1">github link 1</a>
+            <a href="github link 1">https://url-of-github-1.git</a>
             <p>Repo 1 does X. It is useful for Y.</p>
           </li>
           <li>
-            <a href="github link 2">github link 2</a>
+            <a href="github link 2">https://url-of-github-2.git<</a>
             <p>Repo 2 does A. It is designed to B.</p>
           </li>
           <li>
-            <a href="github link 3">github link 3</a>
+            <a href="github link 3">https://url-of-github-3.git<</a>
             <p>Repo 3 does M. It helps in N.</p>
           </li>
         </ol>
@@ -235,7 +261,8 @@ def chat_llm_no_stream(request: RequestModel, chat_session: ChatSession) -> dict
         
         Provide the links always.
         
-        Ask the user which option they prefer.
+        Ask the user which option they prefer. Format in html as below:
+        <p>Which option do you prefer?</p>
         
         Only ask the question and do not number your questions.
         """
@@ -262,44 +289,6 @@ def chat_llm_no_stream(request: RequestModel, chat_session: ChatSession) -> dict
         "repository": git_url
     }
 
-def generate_mermaid(chat_session: ChatSession) -> dict:
-    model = ChatBedrock(
-        model_id=chat_session.model_id,
-        client=bedrock,
-        model_kwargs=chat_session.model_kwargs,
-    )
-    if not chat_session.chats:
-        raise HTTPException(status_code=404, detail="Please provide user requirements.")
-    prompt = f"""
-    Given the following conversation:
-    {chat_session.str_chat()}
-    Generate a mermaid code to represent the architecture.    
-    Make sure each component's name is detailed.
-    Also write texts on the arrows to represent the flow of data. 
-        For ex. F -->|Transaction Succeeds| G[Publish PRODUCT_PURCHASED event] --> END
-    Only generate the code and nothing else.
-    Include as many components as possible and each component should have a detailed name.
-    Use colors and styles to differentiate between components. Be creative.
-    """
-    response = model.invoke(prompt)
-    content = response.content
-
-    if content.startswith("```"):
-        content = content[3:]
-    if content.endswith("```"):
-        content = content[:-3]
-    if content.startswith("mermaid"):
-        content = content[7:]
-
-    last_index = content.rfind("```")
-    if last_index != -1:
-        content = content[:last_index]
-
-    return {
-        "mermaid_code": content,
-        "userID": chat_session.user_id,
-    }
-
 
 @app.post("/chat-llm/")
 def chat_llm(request: RequestModel):
@@ -316,20 +305,6 @@ def chat_llm(request: RequestModel):
         raise HTTPException(
             status_code=500, detail=f"Error generating detailed solution: {str(e)}"
         )
-
-
-# @app.post("/generate-mermaid/")
-# def generate_mermaid_code(mermaid_request: MermaidRequest):
-#     chat_session = session_manager.get_session(mermaid_request.userID)
-#     mermaid_response = generate_mermaid(chat_session)
-#     return mermaid_response
-#
-#
-# @app.post("/get-user-history/")
-# def get_user_history(mermaid_request: MermaidRequest):
-#     chat_session = session_manager.get_session(mermaid_request.userID)
-#     chat_history = chat_session.chats
-#     return {"userID": mermaid_request.userID, "chat_history": chat_history}
 
 
 # List organizations from an user
@@ -437,6 +412,7 @@ def create_workspace(
     else:
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
+
 # Delete a workspace
 @app.delete("/delete-workspace/")
 def delete_workspace(workspaceId: str = Query(..., description="The workspace ID")):
@@ -444,7 +420,7 @@ def delete_workspace(workspaceId: str = Query(..., description="The workspace ID
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
     }
-    
+
     payload = {
         "workspaceId": workspaceId
     }
@@ -457,6 +433,7 @@ def delete_workspace(workspaceId: str = Query(..., description="The workspace ID
         raise HTTPException(status_code=response.status_code, detail=response.text)
     
 
+app.include_router(router)
 if __name__ == "__main__":
     import uvicorn
 
