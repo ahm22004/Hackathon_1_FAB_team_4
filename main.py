@@ -44,16 +44,6 @@ bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-west-2")
 session_manager = ChatSessionManager()
 
 
-# Function to clone repository and list files
-def clone_and_list_files(repo_url):
-    repo_name = repo_url.split("/")[-1].replace(".git", "")
-    if os.path.exists(repo_name):
-        subprocess.run(["rm", "-rf", repo_name])
-    subprocess.run(["git", "clone", repo_url])
-    files = os.listdir(repo_name)
-    return repo_name, files
-
-
 # Function to read the content of a file
 def read_file_content(repo_name, filename):
     with open(os.path.join(repo_name, filename), 'r') as file:
