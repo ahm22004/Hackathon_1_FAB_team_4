@@ -7,13 +7,14 @@ import boto3
 from fastapi import FastAPI, HTTPException,APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_aws import ChatBedrock
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from user_session import ChatSession, ChatSessionManager
 
 import boto3
 from fastapi import FastAPI, HTTPException, Query, Request
 import requests
 from dotenv import load_dotenv
+from typing import List, Optional
 
 # Load environment variables from .env file
 load_dotenv()
@@ -24,7 +25,7 @@ logger = getLogger(__name__)
 app = FastAPI()
 router = APIRouter()
 
-os.environ["AWS_PROFILE"] = "fab-geekle"
+# os.environ["AWS_PROFILE"] = "fab-geekle"
 origins = [
     "*",
 ]
@@ -403,13 +404,38 @@ def stop_workspace(workspaceId: str = Query(..., description="The workspace ID")
     else:
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
+class Task(BaseModel):
+    name: str
+    openMode: str
+    command: str
+
+class Config(BaseModel):
+    tasks: List[Task]
+
+class Editor(BaseModel):
+    name: str
+    version: str
+
+class ContextUrl(BaseModel):
+    url: str
+    workspaceClass: str = "g1-standard"
+    config: Optional[Config]
+    editor: Editor = Field(default_factory=lambda: Editor(name="code", version="latest"))
+
+class Metadata(BaseModel):
+    ownerId: str
+    organizationId: str
+
+class WorkspaceRequest(BaseModel):
+    contextUrl: ContextUrl
+    metadata: Metadata
+
 # Create a new Workspace with github repository
 @app.post("/create-workspace/")
 def create_workspace(
-    url: str = Query(..., description="The context URL"),
+    request: WorkspaceRequest, 
     ownerId: str = Query(..., description="The owner ID"),
-    organizationId: str = Query(..., description="The organization ID")
-):
+    organizationId: str = Query(..., description="The organization ID")):
     headers = {
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
@@ -417,11 +443,11 @@ def create_workspace(
     
     payload = {
         "contextUrl": {
-            "url": url,
-            "workspaceClass": "g1-standard",
+            "url": request.contextUrl.url,
+            "workspaceClass": request.contextUrl.workspaceClass,
             "editor": {
-                "name": "code",
-                "version": "latest"
+                "name": request.contextUrl.editor.name,
+                "version": request.contextUrl.editor.version
             }
         },
         "metadata": {
@@ -429,6 +455,12 @@ def create_workspace(
             "organizationId": organizationId
         }
     }
+
+    # Include tasks if provided
+    if request.contextUrl.config and request.contextUrl.config.tasks:
+        payload["contextUrl"]["config"] = {
+            "tasks": [{"name": task.name, "openMode": task.openMode, "command": task.command} for task in request.contextUrl.config.tasks]
+        }
     
     response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/CreateAndStartWorkspace', headers=headers, json=payload)
     
