@@ -24,7 +24,7 @@ logger = getLogger(__name__)
 app = FastAPI()
 router = APIRouter()
 
-os.environ["AWS_PROFILE"] = "fab-geekle"
+#os.environ["AWS_PROFILE"] = "fab-geekle"
 origins = [
     "*",
 ]
