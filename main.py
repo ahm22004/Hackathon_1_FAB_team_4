@@ -4,11 +4,20 @@ import subprocess
 from logging import getLogger
 
 import boto3
-from fastapi import FastAPI, APIRouter, Request, HTTPException
+from fastapi import FastAPI, HTTPException,APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_aws import ChatBedrock
 from pydantic import BaseModel
 from user_session import ChatSession, ChatSessionManager
+
+import boto3
+from fastapi import FastAPI, HTTPException, Query, Request
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+API_TOKEN = os.environ["API_TOKEN"]
 
 logging.basicConfig(level=logging.INFO)
 logger = getLogger(__name__)
@@ -322,6 +331,131 @@ def chat_llm(request: RequestModel):
 #     chat_history = chat_session.chats
 #     return {"userID": mermaid_request.userID, "chat_history": chat_history}
 
+
+# List organizations from an user
+@app.get("/organizations/")
+def list_organizations():
+    headers = {
+        'Authorization': f'Bearer {API_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    
+    response = requests.post('https://api.gitpod.io/gitpod.v1.OrganizationService/ListOrganizations', headers=headers, json={})
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+@app.get("/workspaces/")
+def list_workspaces(organizationId: str = Query(..., description="The organization ID")):
+    headers = {
+        'Authorization': f'Bearer {API_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "organizationId": organizationId
+    }
+    
+    response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/ListWorkspaces', headers=headers, json=payload)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+# Start a workspace
+@app.post("/start-workspace/")
+def start_workspace(workspaceId: str = Query(..., description="The workspace ID")):
+    headers = {
+        'Authorization': f'Bearer {API_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "workspaceId": workspaceId
+    }
+    
+    response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/StartWorkspace', headers=headers, json=payload)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+# Stop a workspace
+@app.post("/stop-workspace/")
+def stop_workspace(workspaceId: str = Query(..., description="The workspace ID")):
+    headers = {
+        'Authorization': f'Bearer {API_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "workspaceId": workspaceId
+    }
+    
+    response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/StopWorkspace', headers=headers, json=payload)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+# Create a new Workspace with github repository
+@app.post("/create-workspace/")
+def create_workspace(
+    url: str = Query(..., description="The context URL"),
+    ownerId: str = Query(..., description="The owner ID"),
+    organizationId: str = Query(..., description="The organization ID")
+):
+    headers = {
+        'Authorization': f'Bearer {API_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "contextUrl": {
+            "url": url,
+            "workspaceClass": "g1-standard",
+            "editor": {
+                "name": "code",
+                "version": "latest"
+            }
+        },
+        "metadata": {
+            "ownerId": ownerId,
+            "organizationId": organizationId
+        }
+    }
+    
+    response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/CreateAndStartWorkspace', headers=headers, json=payload)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+# Delete a workspace
+@app.delete("/delete-workspace/")
+def delete_workspace(workspaceId: str = Query(..., description="The workspace ID")):
+    headers = {
+        'Authorization': f'Bearer {API_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "workspaceId": workspaceId
+    }
+    
+    response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/DeleteWorkspace', headers=headers, json=payload)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+    
 
 if __name__ == "__main__":
     import uvicorn
