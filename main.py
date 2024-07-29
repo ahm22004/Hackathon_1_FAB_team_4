@@ -3,7 +3,6 @@ import os
 import subprocess
 from logging import getLogger
 
-import boto3
 from fastapi import FastAPI, HTTPException,APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_aws import ChatBedrock
@@ -16,8 +15,8 @@ import requests
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
-API_TOKEN = os.environ["API_TOKEN"]
+# load_dotenv()
+# API_TOKEN = os.environ["API_TOKEN"]
 
 logging.basicConfig(level=logging.INFO)
 logger = getLogger(__name__)
@@ -162,7 +161,6 @@ async def generate_graph(request: Request):
     print(instructions)
 
     return instructions
-app.include_router(router)
 
 
 class ModelKWArgs(BaseModel):
@@ -318,20 +316,6 @@ def chat_llm(request: RequestModel):
         )
 
 
-# @app.post("/generate-mermaid/")
-# def generate_mermaid_code(mermaid_request: MermaidRequest):
-#     chat_session = session_manager.get_session(mermaid_request.userID)
-#     mermaid_response = generate_mermaid(chat_session)
-#     return mermaid_response
-#
-#
-# @app.post("/get-user-history/")
-# def get_user_history(mermaid_request: MermaidRequest):
-#     chat_session = session_manager.get_session(mermaid_request.userID)
-#     chat_history = chat_session.chats
-#     return {"userID": mermaid_request.userID, "chat_history": chat_history}
-
-
 # List organizations from an user
 @app.get("/organizations/")
 def list_organizations():
@@ -339,9 +323,9 @@ def list_organizations():
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
     }
-    
+
     response = requests.post('https://api.gitpod.io/gitpod.v1.OrganizationService/ListOrganizations', headers=headers, json={})
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -353,13 +337,13 @@ def list_workspaces(organizationId: str = Query(..., description="The organizati
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
     }
-    
+
     payload = {
         "organizationId": organizationId
     }
-    
+
     response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/ListWorkspaces', headers=headers, json=payload)
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -372,13 +356,13 @@ def start_workspace(workspaceId: str = Query(..., description="The workspace ID"
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
     }
-    
+
     payload = {
         "workspaceId": workspaceId
     }
-    
+
     response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/StartWorkspace', headers=headers, json=payload)
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -391,13 +375,13 @@ def stop_workspace(workspaceId: str = Query(..., description="The workspace ID")
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
     }
-    
+
     payload = {
         "workspaceId": workspaceId
     }
-    
+
     response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/StopWorkspace', headers=headers, json=payload)
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -406,15 +390,15 @@ def stop_workspace(workspaceId: str = Query(..., description="The workspace ID")
 # Create a new Workspace with github repository
 @app.post("/create-workspace/")
 def create_workspace(
-    url: str = Query(..., description="The context URL"),
-    ownerId: str = Query(..., description="The owner ID"),
-    organizationId: str = Query(..., description="The organization ID")
+        url: str = Query(..., description="The context URL"),
+        ownerId: str = Query(..., description="The owner ID"),
+        organizationId: str = Query(..., description="The organization ID")
 ):
     headers = {
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
     }
-    
+
     payload = {
         "contextUrl": {
             "url": url,
@@ -429,9 +413,9 @@ def create_workspace(
             "organizationId": organizationId
         }
     }
-    
+
     response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/CreateAndStartWorkspace', headers=headers, json=payload)
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -444,19 +428,19 @@ def delete_workspace(workspaceId: str = Query(..., description="The workspace ID
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
     }
-    
+
     payload = {
         "workspaceId": workspaceId
     }
-    
+
     response = requests.post('https://api.gitpod.io/gitpod.v1.WorkspaceService/DeleteWorkspace', headers=headers, json=payload)
-    
+
     if response.status_code == 200:
         return response.json()
     else:
         raise HTTPException(status_code=response.status_code, detail=response.text)
-    
 
+app.include_router(router)
 if __name__ == "__main__":
     import uvicorn
 
