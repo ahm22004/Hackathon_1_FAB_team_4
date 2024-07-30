@@ -56,33 +56,65 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 ```json
 {
-  "git_url": "https://github.com/your-repo.git"
+  "git_url": "https://github.com/giventech/rwd.git"
 }
+
 ```
 
 **Response**:
 
 ```json
 {
-  "user_input": "https://github.com/your-repo.git",
-  "model_output": "Generated setup instructions",
-  "command": "command1 && command2 && command3",
-  "typeFound": true
+  "user_input": "https://github.com/giventech/rwd.git",
+  "command": "bundle install && rails new project_name -d postgresql && cd project_name && rails server",
+  "typeFound": true,
+  "model_output": {
+    "content": "bundle install && rails new project_name -d postgresql && cd project_name && rails server",
+    "additional_kwargs": {
+      "usage": {
+        "prompt_tokens": 149,
+        "completion_tokens": 22,
+        "total_tokens": 171
+      },
+      "stop_reason": "end_turn",
+      "model_id": "anthropic.claude-3-haiku-20240307-v1:0"
+    },
+    "response_metadata": {
+      "usage": {
+        "prompt_tokens": 149,
+        "completion_tokens": 22,
+        "total_tokens": 171
+      },
+      "stop_reason": "end_turn",
+      "model_id": "anthropic.claude-3-haiku-20240307-v1:0"
+    },
+    "type": "ai",
+    "name": null,
+    "id": "run-155a47bf-f10d-4ca6-9fb3-e6ed1a138cca-0",
+    "example": false,
+    "tool_calls": [],
+    "invalid_tool_calls": [],
+    "usage_metadata": {
+      "input_tokens": 149,
+      "output_tokens": 22,
+      "total_tokens": 171
+    }
+  }
 }
 ```
 
-### Chat LLM
+### Chat LLM : Succession of question to find what is the repo
 
 **Endpoint**: `/chat-llm/`
 
 **Method**: `POST`
 
-**Request Body**:
-
+**Request Body 1**:
+userId and requestId must be unique for each requests
 ```json
 {
-  "userID": "user123",
-  "requestID": "req123",
+  "userID": "user124",
+  "requestID": "req124",
   "user_input": "I want a node base application for a note book",
   "modelID": "anthropic.claude-3-haiku-20240307-v1:0",
   "modelParameter": {
@@ -93,16 +125,45 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 }
 ```
 
-**Response**:
+**Response 1**:
 
 ```json
 {
-  "user_input": "Your question or task",
-  "model_output": "Response from the model",
+  "user_input": "I want a node base application for a note book",
+  "model_output": "<ol>\n  <li>\n    <a href=\"https://github.com/microsoft/vscode-notebook-renderer\">https://github.com/microsoft/vscode-notebook-renderer</a>\n    <p>This repo provides a framework for creating notebook renderers in Visual Studio Code, allowing you to build custom notebook experiences.</p>\n  </li>\n  <li>\n    <a href=\"https://github.com/jupyter/notebook\">https://github.com/jupyter/notebook</a>\n    <p>This is the classic Jupyter Notebook application, a web-based interactive computing environment that allows users to create and share documents that contain live code, visualizations, and narrative text.</p>\n  </li>\n  <li>\n    <a href=\"https://github.com/nteract/nteract\">https://github.com/nteract/nteract</a>\n    <p>nteract is a desktop application that provides an enhanced Jupyter Notebook experience, with support for multiple kernels, interactive plotting, and more.</p>\n  </li>\n  <li>\n    <a href=\"https://github.com/JupyterLab/jupyterlab\">https://github.com/JupyterLab/jupyterlab</a>\n    <p>JupyterLab is the next-generation web-based user interface for Project Jupyter, providing a more powerful and flexible environment for working with notebooks, data, and applications.</p>\n  </li>\n</ol>\n\n<p>Which option do you prefer?</p>",
   "wantsToDraw": false,
-  "repository": "https://url-of-github-repo.git"
+  "repository": null
 }
 ```
+
+**Request Body 2**:
+userId and requestId must be unique for each requests
+
+```json
+{
+"userID": "user123",
+"requestID": "req123",
+"user_input": "1",
+"modelID": "anthropic.claude-3-haiku-20240307-v1:0",
+"modelParameter": {
+"temperature": 0.75,
+"max_tokens": 2000,
+"top_p": 0.9
+}
+}
+```
+
+
+**Response 2 ( Use choose solution 1)**:
+```json
+{
+  "user_input": "1",
+  "model_output": "Based on your preference for option 1, I would recommend the following repository:\n\nhttps://github.com/microsoft/vscode-notebook-renderer.git\n\nThis repository provides a framework for creating notebook renderers in Visual Studio Code, allowing you to build custom notebook experiences.",
+  "wantsToDraw": false,
+  "repository": "https://github.com/microsoft/vscode-notebook-renderer.git"
+}
+```
+
 
 ### List Organizations
 

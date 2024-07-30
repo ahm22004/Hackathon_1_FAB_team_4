@@ -18,14 +18,14 @@ import tempfile
 
 # Load environment variables from .env file
 load_dotenv()
-API_TOKEN = os.environ["API_TOKEN"]
+#API_TOKEN = os.environ["API_TOKEN"]
 
 logging.basicConfig(level=logging.INFO)
 logger = getLogger(__name__)
 app = FastAPI()
 router = APIRouter()
 
-#os.environ["AWS_PROFILE"] = "fab-geekle"
+os.environ["AWS_PROFILE"] = "fab-geekle"
 origins = [
     "*",
 ]
@@ -182,10 +182,9 @@ async def generate_graph(request: Request):
     temp_dir.cleanup();
     return {
         "user_input": repo_url,
-        "model_output": instructions,
         "command": instructions.content,
-        "typeFound": True
-
+        "typeFound": True,
+        "model_output": instructions
     }
 
 
@@ -218,24 +217,6 @@ def chat_llm_no_stream(request: RequestModel, chat_session: ChatSession) -> dict
         model_kwargs=request.modelParameter,
         streaming=True,
     )
-    if len(chat_session.chats) != 0:
-        wants_to_draw_prompt = f"""
-            There has been a conversation between the user and the chatbot about providing github links repository.
-            Given the user's input: {request.user_input}
-            When  user imply that they have chosen a solution or chose a number ?
-            Respond with 
-            <p id="hiddenGitHub" hidden>githublink.git</p>.
-            <p>Loading and launching repo in sandbox</p>.
-             
-        """
-        wants_to_draw = chat_model.invoke(wants_to_draw_prompt).content
-        if "Yes" in wants_to_draw:
-            chat_session.add_chat(request.user_input, wants_to_draw)
-            return {
-                "user_input": request.user_input,
-                "wantsToDraw": True,
-            }
-
     text_input = request.user_input
     if len(chat_session.chats) == 0:
         initial_context = """
