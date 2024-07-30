@@ -83,7 +83,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 {
   "userID": "user123",
   "requestID": "req123",
-  "user_input": "Your question or task",
+  "user_input": "I want a node base application for a note book",
   "modelID": "anthropic.claude-3-haiku-20240307-v1:0",
   "modelParameter": {
     "temperature": 0.75,
@@ -173,6 +173,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ### Create Workspace
+When creating a workspace a set of tasks can be run along with it. Tasks can be seen as system commands. We can therefore pass commands to run in a workspace
 
 **Endpoint**: `/create-workspace/`
 
