@@ -1,17 +1,15 @@
 import logging
 import os
-import subprocess
 from logging import getLogger
 
-import boto3
-from fastapi import FastAPI, HTTPException,APIRouter
+
+from fastapi import APIRouter,FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_aws import ChatBedrock
 from pydantic import BaseModel, Field
 from user_session import ChatSession, ChatSessionManager
 
 import boto3
-from fastapi import FastAPI, HTTPException, Query, Request
 import requests
 from dotenv import load_dotenv
 from typing import List, Optional
@@ -20,14 +18,14 @@ import tempfile
 
 # Load environment variables from .env file
 load_dotenv()
-API_TOKEN = os.environ["API_TOKEN"]
+#API_TOKEN = os.environ["API_TOKEN"]
 
 logging.basicConfig(level=logging.INFO)
 logger = getLogger(__name__)
 app = FastAPI()
 router = APIRouter()
 
-#os.environ["AWS_PROFILE"] = "fab-geekle"
+os.environ["AWS_PROFILE"] = "fab-geekle"
 origins = [
     "*",
 ]
@@ -76,7 +74,6 @@ def get_response_from_llm(
     original_response = content
     logger.info(f"Response from LLM: {content}")
     # print(content)
-
     return content
 
 
@@ -84,9 +81,11 @@ def generate_prompt_for_command(
         project_type: str, file_content: str
 ):
     prompt = f"""
-        The project type is {project_type}. Create a bash script to install and execute the project based on the following file content:
-        {file_content}
-        Only provide the bash script, no other content.
+        The project type is {project_type}. Create bash  commands to  install and execute the project based on the 
+        following file content: {file_content}
+        only provide the commands  and nothing else
+        Format: 
+        command1 && command2 && command3 && command3
         """
     return prompt
 
@@ -128,7 +127,6 @@ def clone_and_list_files(repo_url, temp_dir):
 
     try:
         ## delete repository
-        # shutil.rmtree(repo_name_dir)
         repo = git.Repo.clone_from(repo_url, repo_name_dir)
         print(f"Repository cloned to {repo_name_dir}")
     except Exception as e:
@@ -145,12 +143,6 @@ def clone_and_list_files(repo_url, temp_dir):
     return repo_name_dir, files_list
 
 
-# Function to read the content of a file
-def read_file_content(repo_name, filename):
-    with open(os.path.join(repo_name, filename), 'r') as file:
-        return file.read()
-
-
 @router.post("/dashboard")
 async def generate_graph(request: Request):
     # try:
@@ -163,9 +155,18 @@ async def generate_graph(request: Request):
     temp_dir = tempfile.TemporaryDirectory()
     repo_name, files = clone_and_list_files(repo_url, temp_dir)
     project_type, file_content = determine_project_type_and_instructions(files, repo_name)
-    processed_prompt = generate_prompt_for_command(project_type, file_content)
+    processed_prompt = generate_prompt_for_command("Unknown", file_content)
+    project_type = "Unknown"
     if project_type == "Unknown":
         instructions = "#!/bin/bash\n# The project type could not be determined automatically. Please check the repository's README file for setup instructions."
+        return {
+            "user_input": repo_url,
+            "model_output": instructions,
+            "command": "",
+            "typeFound": False
+
+        }
+
     else:
 
         llm = ChatBedrock(
@@ -175,12 +176,20 @@ async def generate_graph(request: Request):
                 "top_p": 0.9,
             }
         )
-        # Generate instructions using LangChain
+        # Generate instructions using bedrock
         instructions = llm.invoke(processed_prompt)
     print(instructions)
     # cleaning up temporary files
     temp_dir.cleanup();
-    return instructions
+    return {
+        "user_input": repo_url,
+        "model_output": instructions,
+        "command": instructions.content,
+        "typeFound": True
+
+    }
+
+
 app.include_router(router)
 
 
