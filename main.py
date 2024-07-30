@@ -18,14 +18,14 @@ import tempfile
 
 # Load environment variables from .env file
 load_dotenv()
-#API_TOKEN = os.environ["API_TOKEN"]
+API_TOKEN = os.environ["API_TOKEN"]
 
 logging.basicConfig(level=logging.INFO)
 logger = getLogger(__name__)
 app = FastAPI()
 router = APIRouter()
 
-os.environ["AWS_PROFILE"] = "fab-geekle"
+#os.environ["AWS_PROFILE"] = "fab-geekle"
 origins = [
     "*",
 ]
