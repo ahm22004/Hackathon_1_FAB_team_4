@@ -155,8 +155,7 @@ async def generate_graph(request: Request):
     temp_dir = tempfile.TemporaryDirectory()
     repo_name, files = clone_and_list_files(repo_url, temp_dir)
     project_type, file_content = determine_project_type_and_instructions(files, repo_name)
-    processed_prompt = generate_prompt_for_command("Unknown", file_content)
-    project_type = "Unknown"
+    processed_prompt = generate_prompt_for_command(project_type, file_content)
     if project_type == "Unknown":
         instructions = "#!/bin/bash\n# The project type could not be determined automatically. Please check the repository's README file for setup instructions."
         return {
