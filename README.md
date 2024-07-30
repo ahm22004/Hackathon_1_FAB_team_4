@@ -10,7 +10,12 @@ This project provides an API built with FastAPI that integrates with AWS Bedrock
 4. Interacting with Gitpod to 
    * create, delete workspaces,
    * Execute command in the workspaces (tasks)
-     
+## Video and presentation of Architecture and API 
+https://drive.google.com/drive/folders/1MOt_YiKbSFciMMF9h5I2UqvzuTdQ9Meq?usp=sharing
+
+
+## Conceptual view
+![img.png](img.png)
 
 ## Requirements
 
