@@ -8,3 +8,4 @@ langchain-community
 langchain-core
 gitpython
 json5
+GitPython
