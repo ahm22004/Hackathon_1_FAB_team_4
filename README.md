@@ -4,9 +4,13 @@
 
 This project provides an API built with FastAPI that integrates with AWS Bedrock for language model interactions, Git repositories, and Gitpod workspace management. The primary functionalities include:
 
-1. Cloning Git repositories.
-2. Detecting project types and generating setup commands using a language model.
-3. Interacting with Gitpod to list organizations, workspaces, and manage workspaces.
+1. Determining required repo for user using a language Model
+2. Cloning/Analysing git repo project types 
+3. Generating setup commands using a language model.
+4. Interacting with Gitpod to 
+   * create, delete workspaces,
+   * Execute command in the workspaces (tasks)
+     
 
 ## Requirements
 
@@ -18,6 +22,12 @@ This project provides an API built with FastAPI that integrates with AWS Bedrock
 - gitpython
 - dotenv
 - langchain_aws
+- langchain-aws
+- pydantic
+- langchain
+- gitpython
+- json5
+    
 
 ## Setup
 
@@ -32,7 +42,7 @@ pip install fastapi boto3 requests pydantic gitpython python-dotenv langchain_aw
 Create a `.env` file in the root directory and add the following environment variables:
 
 ```
-AWS_PROFILE=fab-geekle
+AWS_PROFILE=name_of_your_aws_profile
 API_TOKEN=your_gitpod_api_token
 ```
 
