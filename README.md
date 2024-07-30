@@ -58,6 +58,12 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 ### Clone Repository and Generate Setup Commands
 
+### Base url for alle  pont 
+
+https://18.237.155.139:8002
+
+e.g https://18.237.155.139:8002/dashboard
+
 **Endpoint**: `/dashboard`
 
 **Method**: `POST`
@@ -243,8 +249,11 @@ userId and requestId must be unique for each requests
 }
 ```
 
-### Create Workspace
-When creating a workspace a set of tasks can be run along with it. Tasks can be seen as system commands. We can therefore pass commands to run in a workspace
+### Create Workspace && Execute command in workspace environment
+
+* When creating a workspace a set of tasks can be run along with it. 
+* Tasks can be seen as system commands. 
+* We can therefore pass commands to run in a workspace/sandox environment
 
 **Endpoint**: `/create-workspace/`
 
@@ -260,14 +269,14 @@ When creating a workspace a set of tasks can be run along with it. Tasks can be 
 ```json
 {
   "contextUrl": {
-    "url": "https://github.com/your-repo.git",
+    "url": "https://github.com/giventech/rwd.git",
     "workspaceClass": "g1-standard",
     "config": {
       "tasks": [
         {
-          "name": "Task name",
+          "name": "Setup and Install",
           "openMode": "default",
-          "command": "command to run"
+          "command": "bundle install && rails new project_name -d postgresql && cd project_name && rails server"
         }
       ]
     },
