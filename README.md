@@ -2,7 +2,9 @@
 
 ## Overview
 
-This project provides an API built with FastAPI that integrates with AWS Bedrock for language model interactions, Git repositories, and Gitpod workspace management. The primary functionalities include:
+This project provides an API built with FastAPI that integrates with AWS Bedrock for language model interactions, Git repositories, and Gitpod workspace management. 
+
+## Primary functionalities:
 
 1. Determining required repo for user using a language Model
 2. Cloning/Analysing git repo project types 
